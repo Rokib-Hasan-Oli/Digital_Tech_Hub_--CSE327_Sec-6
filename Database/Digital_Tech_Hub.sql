@@ -61,3 +61,8 @@ CREATE TABLE IF NOT EXISTS order_items (
     FOREIGN KEY (order_id) REFERENCES orders(order_id) ON DELETE CASCADE,
     FOREIGN KEY (product_id) REFERENCES products(product_id) ON DELETE CASCADE
 );
+
+-- NOTE: The password 'admin123' is plain text. 
+
+INSERT IGNORE INTO admins (username, email, password, profile_image) VALUES 
+('SuperAdmin', 'admin@dth.com', 'admin123', 'https://icons.iconarchive.com/icons/iconshock/real-vista-general/256/administrator-icon.png');
