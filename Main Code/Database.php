@@ -1,13 +1,11 @@
+<?php
 /**
  * Database Connection Class
  * * Implements the SINGLETON Design Pattern.
  */
-<?php
-
 class Database {
 
     private static $instance = null;
-    
     private $connection;
 
     private $host = 'localhost';
@@ -16,15 +14,14 @@ class Database {
     private $database = 'digital_tech_hub';
 
     private function __construct() {
- 
-        $this->connection = new mysqli($this->host, $this->username, $this->password, $this->database);
 
+        $this->connection = new mysqli($this->host, $this->username, $this->password, $this->database);
         if ($this->connection->connect_error) {
             die("Database Connection Failed: " . $this->connection->connect_error);
         }
-
         $this->connection->set_charset("utf8");
     }
+
 
     public static function getInstance() {
         if (self::$instance === null) {
@@ -32,6 +29,7 @@ class Database {
         }
         return self::$instance;
     }
+
 
     public function getConnection() {
         return $this->connection;
