@@ -2,30 +2,43 @@
 session_start();
 require_once 'Database.php';
 
+// Theme Colors derived from your Logo concept
+// Primary: #0056b3 (Tech Blue), Background: #f0f2f5 (Light Grey)
 
-
-$logo = "https://raw.githubusercontent.com/Rokib-Hasan-Oli/Digital_Tech_Hub_--CSE327_Sec-6/Rokib-Hasan-Oli/Relevant%20documents%20and%20FIle/Logo/2.png";
+$logo = "https://raw.githubusercontent.com/Rokib-Hasan-Oli/Digital_Tech_Hub_--CSE327_Sec-6/Rokib-Hasan-Oli/Relevant%20documents%20and%20FIle/Logo/1.png";
 $msg = "";
 $msg_type = ""; // 'success' or 'error'
 
 $db = Database::getInstance()->getConnection();
 
 // ==========================================
-// 1. HANDLE REGISTER
+// 1. HANDLE REGISTER (FIXED)
 // ==========================================
 if (isset($_POST['register'])) {
     $name = $db->real_escape_string($_POST['name']);
     $email = $db->real_escape_string($_POST['email']);
     $pass = password_hash($_POST['password'], PASSWORD_DEFAULT);
     
-    $sql = "INSERT INTO users (full_name, email, password) VALUES ('$name', '$email', '$pass')";
-    if ($db->query($sql)) {
-        $msg = "Registration Successful! Please Login.";
-        $msg_type = "success";
-    } else {
-        $msg = "Error: " . $db->error;
+    // --- FIX START: Check if email already exists ---
+    $check_query = "SELECT * FROM users WHERE email = '$email'";
+    $check_result = $db->query($check_query);
+
+    if ($check_result->num_rows > 0) {
+        // Email found, show red error message
+        $msg = "This account already exists on your device";
         $msg_type = "error";
+    } else {
+        // Email is new, proceed with registration
+        $sql = "INSERT INTO users (full_name, email, password) VALUES ('$name', '$email', '$pass')";
+        if ($db->query($sql)) {
+            $msg = "Registration Successful! Please Login.";
+            $msg_type = "success";
+        } else {
+            $msg = "Error: " . $db->error;
+            $msg_type = "error";
+        }
     }
+    // --- FIX END ---
 }
 
 // ==========================================
