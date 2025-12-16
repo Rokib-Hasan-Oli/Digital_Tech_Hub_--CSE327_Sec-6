@@ -1,0 +1,330 @@
+/* =============================
+   EXPERT PRODUCT DETAILS THEME
+============================= */
+
+/* --- 1. Logo Fix (Guaranteed) --- */
+.logo-icon {
+    width: 50px !important;
+    height: 50px !important;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden !important;
+    background: white;
+    flex-shrink: 0;
+}
+.logo-icon img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover !important;
+}
+
+/* --- 2. Main Layout (Auto Height) --- */
+.product-showcase-card {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.04);
+    /* IMPORTANT: Removing fixed height/overflow hidden so description shows */
+    overflow: visible; 
+    margin-bottom: 40px;
+    border: 1px solid #eef2f6;
+    animation: fadeIn 0.6s ease-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* --- 3. Left: Image Area --- */
+.showcase-image {
+    background: #f8fafc;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 60px;
+    border-right: 1px solid #f1f5f9;
+    /* Ensure image area stretches to match content height */
+    min-height: 500px; 
+}
+
+.main-img-wrap {
+    width: 100%;
+    max-width: 450px;
+    height: 450px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.3s ease;
+}
+
+.main-img-wrap img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    filter: drop-shadow(0 20px 30px rgba(0,0,0,0.1));
+}
+
+.main-img-wrap:hover {
+    transform: scale(1.05);
+}
+
+/* --- 4. Right: Info Area --- */
+.showcase-info {
+    padding: 50px;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Tags */
+.meta-tags {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.tag-category {
+    background: #eff6ff;
+    color: #1d4ed8;
+    padding: 6px 14px;
+    border-radius: 30px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.tag-stock {
+    padding: 6px 14px;
+    border-radius: 30px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.tag-stock.in { background: #dcfce7; color: #15803d; }
+.tag-stock.out { background: #fee2e2; color: #b91c1c; }
+
+/* Typography */
+.product-heading {
+    font-size: 2.2rem;
+    color: #1e293b;
+    margin-bottom: 15px;
+    font-weight: 800;
+    line-height: 1.2;
+}
+
+.price-block {
+    margin-bottom: 30px;
+    display: flex;
+    align-items: flex-start;
+}
+.price-block .currency {
+    font-size: 1.5rem;
+    color: #3b82f6;
+    margin-top: 5px;
+    font-weight: 600;
+}
+.price-block .amount {
+    font-size: 3rem;
+    color: #0f172a;
+    font-weight: 800;
+    line-height: 1;
+    transition: opacity 0.2s;
+}
+
+/* Description (Visible & Readable) */
+.desc-block {
+    margin-bottom: 30px;
+}
+.desc-block h4 {
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    color: #94a3b8;
+    margin-bottom: 10px;
+    letter-spacing: 1px;
+    font-weight: 700;
+}
+.desc-block p {
+    color: #334155; /* Dark Slate Gray for readability */
+    line-height: 1.7;
+    font-size: 1rem;
+}
+
+/* --- 5. Warranty Toggle (Expert UI) --- */
+.option-card {
+    background: #fffbeb;
+    border: 1px solid #fcd34d;
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 30px;
+}
+
+.custom-toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+}
+
+.toggle-info { display: flex; flex-direction: column; }
+.toggle-title { font-weight: 700; color: #92400e; display: flex; align-items: center; gap: 8px; }
+.toggle-desc { font-size: 0.85rem; color: #b45309; margin-top: 2px; }
+
+/* Switch CSS */
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 50px;
+    height: 28px;
+}
+.toggle-switch input { opacity: 0; width: 0; height: 0; }
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-color: #cbd5e1;
+    transition: .4s;
+    border-radius: 34px;
+}
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 22px;
+    width: 22px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+input:checked + .slider { background-color: #f59e0b; }
+input:checked + .slider:before { transform: translateX(22px); }
+
+/* --- 6. Action Footer --- */
+.action-footer {
+    display: flex;
+    gap: 16px;
+    margin-top: auto;
+}
+
+.qty-control {
+    display: flex;
+    background: #f1f5f9;
+    border-radius: 10px;
+    padding: 5px;
+    width: 140px;
+}
+.qty-control button {
+    width: 40px;
+    border: none;
+    background: white;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1rem;
+    color: #334155;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    transition: 0.2s;
+}
+.qty-control button:hover { background: #e2e8f0; }
+.qty-control input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    text-align: center;
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: #0f172a;
+    outline: none;
+}
+
+.btn-add-cart {
+    flex: 1;
+    background: #0f172a;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+.btn-add-cart:hover {
+    background: #1e293b;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(15, 23, 42, 0.2);
+}
+.btn-add-cart:disabled {
+    background: #94a3b8;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* --- 7. Related Section --- */
+.related-section h3 {
+    margin-top: 40px;
+    margin-bottom: 20px;
+    font-size: 1.4rem;
+    color: #1e293b;
+}
+
+.related-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 20px;
+}
+
+.mini-card {
+    background: white;
+    border-radius: 12px;
+    padding: 15px;
+    border: 1px solid #f1f5f9;
+    text-decoration: none;
+    transition: transform 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+.mini-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    border-color: #e2e8f0;
+}
+.mini-img {
+    width: 60px;
+    height: 60px;
+    flex-shrink: 0;
+}
+.mini-img img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+.mini-info h5 {
+    color: #334155;
+    margin-bottom: 4px;
+    font-size: 0.95rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 130px;
+}
+.mini-info span {
+    color: #3b82f6;
+    font-weight: 700;
+    font-size: 0.9rem;
+}
+
+/* --- Responsive --- */
+@media (max-width: 1024px) {
+    .product-showcase-card { grid-template-columns: 1fr; }
+    .showcase-image { height: 350px; border-right: none; border-bottom: 1px solid #f1f5f9; }
+    .showcase-info { padding: 30px; }
+}
