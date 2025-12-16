@@ -2,19 +2,31 @@
 session_start();
 require_once 'AdminProxy.php';
 
-// 1. PROXY PATTERN: Security Check
+
 $proxy = new AdminProxy();
 $proxy->render(); 
 
 $db = Database::getInstance()->getConnection();
-$logo = "https://raw.githubusercontent.com/Rokib-Hasan-Oli/Digital_Tech_Hub_--CSE327_Sec-6/Rokib-Hasan-Oli/Relevant%20documents%20and%20FIle/Logo/1.png";
+$logo = "https://raw.githubusercontent.com/Rokib-Hasan-Oli/Digital_Tech_Hub_--CSE327_Sec-6/Rokib-Hasan-Oli/Relevant%20documents%20and%20FIle/Logo/2.png";
 $msg = "";
 
-// ====================================================
-// HANDLE ACTIONS (PHP LOGIC)
-// ====================================================
 
-// 1. Delete Actions (GET)
+function send_user_notification($db, $order_id, $message) {
+    
+    $u_check = $db->query("SELECT user_id FROM orders WHERE order_id = $order_id");
+    if ($u_check && $u_check->num_rows > 0) {
+        $uid = $u_check->fetch_assoc()['user_id'];
+        
+       
+        $stmt = $db->prepare("INSERT INTO notifications (user_id, message) VALUES (?, ?)");
+        if ($stmt) {
+            $stmt->bind_param("is", $uid, $message);
+            $stmt->execute();
+        }
+    }
+}
+
+
 if (isset($_GET['delete_cat'])) {
     $id = intval($_GET['delete_cat']);
     $db->query("DELETE FROM categories WHERE category_id=$id");
@@ -27,13 +39,20 @@ if (isset($_GET['delete_prod'])) {
     $msg = "Product Deleted.";
 }
 
+
 if (isset($_GET['block_user'])) {
     $uid = intval($_GET['block_user']);
     $db->query("UPDATE users SET status='Blocked' WHERE user_id=$uid");
     $msg = "User Blocked.";
 }
 
-// 2. Add Category (POST)
+if (isset($_GET['unblock_user'])) {
+    $uid = intval($_GET['unblock_user']);
+    $db->query("UPDATE users SET status='Active' WHERE user_id=$uid");
+    $msg = "User Unblocked and set to Active.";
+}
+
+
 if (isset($_POST['add_cat'])) {
     $name = $db->real_escape_string($_POST['cat_name']);
     $desc = $db->real_escape_string($_POST['cat_desc']);
@@ -44,15 +63,16 @@ if (isset($_POST['add_cat'])) {
     }
 }
 
-// 3. Add Product (POST)
+
 if (isset($_POST['add_product'])) {
     $name = $db->real_escape_string($_POST['name']);
     $desc = $db->real_escape_string($_POST['description']);
     $price = $_POST['price'];
     $stock = $_POST['stock'];
     $cat_id = $_POST['category_id'];
+    $has_warranty = isset($_POST['has_warranty']) ? 1 : 0;
     
-    // Image Upload Handling
+    
     $image = "default_product.png";
     if (isset($_FILES['product_image']['name']) && $_FILES['product_image']['name'] != "") {
         $target_dir = "uploads/";
@@ -63,8 +83,8 @@ if (isset($_POST['add_product'])) {
         move_uploaded_file($_FILES["product_image"]["tmp_name"], $target_file);
     }
 
-    $sql = "INSERT INTO products (category_id, name, description, price, stock_quantity, product_image) 
-            VALUES ('$cat_id', '$name', '$desc', '$price', '$stock', '$image')";
+    $sql = "INSERT INTO products (category_id, name, description, price, stock_quantity, product_image, has_warranty) 
+            VALUES ('$cat_id', '$name', '$desc', '$price', '$stock', '$image', '$has_warranty')";
             
     if ($db->query($sql)) {
         $msg = "Product Added Successfully.";
@@ -72,229 +92,361 @@ if (isset($_POST['add_product'])) {
         $msg = "Error: " . $db->error;
     }
 }
+
+
+if (isset($_GET['update_order_status']) && isset($_GET['order_id'])) {
+    $order_id = intval($_GET['order_id']);
+    $new_status = $db->real_escape_string($_GET['update_order_status']);
+    
+    
+    $db->query("UPDATE orders SET order_status='$new_status' WHERE order_id=$order_id");
+    
+    
+    $msg_text = "Your Order #$order_id status has been updated to: $new_status";
+    send_user_notification($db, $order_id, $msg_text);
+
+    $msg = "Order #$order_id status updated to **$new_status** & User Notified.";
+}
+
+
+if (isset($_GET['update_payment_status']) && isset($_GET['order_id'])) {
+    $order_id = intval($_GET['order_id']);
+    $new_pay_status = $db->real_escape_string($_GET['update_payment_status']);
+    
+   
+    $db->query("UPDATE orders SET payment_status='$new_pay_status' WHERE order_id=$order_id");
+    
+    
+    $msg_text = "Payment update for Order #$order_id: Status is now $new_pay_status";
+    send_user_notification($db, $order_id, $msg_text);
+
+    $msg = "Order #$order_id Payment Status set to **$new_pay_status** & User Notified.";
+}
 ?>
 
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Admin Dashboard - Digital Tech Hub</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin:0; }
-        .sidebar { width: 250px; background: #333; color: white; height: 100vh; position: fixed; padding: 20px; }
-        .sidebar a { color: white; text-decoration: none; display: block; padding: 10px; margin-bottom: 5px; }
-        .sidebar a:hover { background: #575757; }
-        .content { margin-left: 270px; padding: 20px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-        th { background-color: #f2f2f2; }
-        .alert { padding: 10px; background-color: #4CAF50; color: white; margin-bottom: 15px; }
-        .btn-del { background: red; color: white; text-decoration: none; padding: 5px 10px; border-radius: 3px; font-size: 12px; }
-        .form-group { margin-bottom: 10px; }
-        label { display: block; font-weight: bold; }
-        input, textarea, select { width: 100%; padding: 8px; box-sizing: border-box; }
-    </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard | Digital Tech Hub</title>
+    
+    <link rel="stylesheet" href="admin_dashboard.css">
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
 </head>
 <body>
 
-    <div class="sidebar">
-        <center><img src="<?php echo $logo; ?>" width="120" style="background:white; border-radius:5px;"></center>
-        <h3>Admin Panel</h3>
-        <hr>
-        <a href="?view=products">Manage Products</a>
-        <a href="?view=categories">Manage Categories</a>
-        <a href="?view=users">Manage Users</a>
-        <a href="?view=orders">Manage Orders</a>
-        <br>
-        <a href="logout.php" style="color: #ff6b6b;">Logout</a>
-    </div>
+<div class="dashboard-container">
 
-    <div class="content">
-        <?php if($msg) echo "<div class='alert'>$msg</div>"; ?>
+    <aside class="sidebar">
+        <div class="logo-area">
+            <div class="logo-icon">
+                <img src="<?php echo $logo; ?>" alt="Admin Logo">
+            </div>
+            <span>Digital Tech Hub</span>
+        </div>
 
-        <!-- ========================================== -->
-        <!-- VIEW: PRODUCTS -->
-        <!-- ========================================== -->
-        <?php if (!isset($_GET['view']) || $_GET['view'] == 'products') { 
-            // Check if categories exist
-            $cat_check = $db->query("SELECT * FROM categories");
-            $has_cats = $cat_check->num_rows > 0;
-        ?>
-            <h2>Manage Products</h2>
-            
-            <div style="background: #f9f9f9; padding: 20px; border: 1px solid #ddd;">
-                <h3>Add New Product</h3>
-                <?php if (!$has_cats) { ?>
-                    <p style="color:red;"><b>Warning:</b> You must add a Category first before adding products.</p>
-                    <a href="?view=categories">Go to Categories</a>
-                <?php } else { ?>
-                    <form method="post" enctype="multipart/form-data">
-                        <div class="form-group">
-                            <label>Product Name:</label>
-                            <input type="text" name="name" required>
+        <div class="user-profile-widget">
+            <div class="avatar-circle">A</div>
+            <div class="user-info">
+                <h3>Administrator</h3>
+                <span class="badge">System Control</span>
+            </div>
+        </div>
+
+        <nav class="side-nav">
+            <ul>
+                <li><a href="?view=products" class="<?php echo (!isset($_GET['view']) || $_GET['view'] == 'products') ? 'active' : ''; ?>"><i class="fa fa-box"></i> Products</a></li>
+                <li><a href="?view=categories" class="<?php echo (isset($_GET['view']) && $_GET['view'] == 'categories') ? 'active' : ''; ?>"><i class="fa fa-list"></i> Categories</a></li>
+                <li><a href="?view=users" class="<?php echo (isset($_GET['view']) && $_GET['view'] == 'users') ? 'active' : ''; ?>"><i class="fa fa-users"></i> Users</a></li>
+                <li><a href="?view=orders" class="<?php echo (isset($_GET['view']) && $_GET['view'] == 'orders') ? 'active' : ''; ?>"><i class="fa fa-shopping-cart"></i> Orders</a></li>
+                <li class="logout-item"><a href="logout.php"><i class="fa fa-sign-out-alt"></i> Logout</a></li>
+            </ul>
+        </nav>
+    </aside>
+
+    <main class="main-content">
+
+        <header class="topbar">
+            <div class="welcome-text">
+                <h2>Admin Panel</h2>
+                <p>Manage your digital inventory and users.</p>
+            </div>
+            <div class="top-actions">
+                <div class="notification-bell">
+                    <i class="fa-regular fa-bell"></i>
+                </div>
+            </div>
+        </header>
+
+        <div class="scrollable-content">
+
+            <?php if($msg): ?>
+                <div class="alert-box">
+                    <i class="fa fa-info-circle"></i> <?php echo $msg; ?>
+                </div>
+            <?php endif; ?>
+
+            <?php if (!isset($_GET['view']) || $_GET['view'] == 'products') { 
+                $cat_check = $db->query("SELECT * FROM categories");
+                $has_cats = $cat_check->num_rows > 0;
+            ?>
+                <div class="panel-section">
+                    <div class="section-header">
+                        <h3><i class="fa fa-plus-circle"></i> Add New Product</h3>
+                    </div>
+
+                    <?php if (!$has_cats) { ?>
+                        <div class="warning-box">
+                            <i class="fa fa-exclamation-triangle"></i>
+                            <p>You must add a Category first before adding products.</p>
+                            <a href="?view=categories" class="btn-link">Go to Categories</a>
                         </div>
-                        <div class="form-group">
-                            <label>Description:</label>
-                            <textarea name="description" required></textarea>
-                        </div>
-                        <div class="form-group">
-                            <label>Category:</label>
-                            <select name="category_id" required>
-                                <?php 
-                                $cat_check->data_seek(0); // Reset pointer
-                                while($c = $cat_check->fetch_assoc()) {
-                                    echo "<option value='{$c['category_id']}'>{$c['name']}</option>";
+                    <?php } else { ?>
+                        <form method="post" enctype="multipart/form-data" class="admin-form">
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label>Product Name</label>
+                                    <input type="text" name="name" required placeholder="e.g. iPhone 15">
+                                </div>
+                                <div class="form-group">
+                                    <label>Category</label>
+                                    <select name="category_id" required>
+                                        <?php 
+                                        $cat_check->data_seek(0);
+                                        while($c = $cat_check->fetch_assoc()) {
+                                            echo "<option value='{$c['category_id']}'>{$c['name']}</option>";
+                                        }
+                                        ?>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Price (Tk)</label>
+                                    <input type="number" name="price" step="0.01" required placeholder="0.00">
+                                </div>
+                                <div class="form-group">
+                                    <label>Stock Quantity</label>
+                                    <input type="number" name="stock" required placeholder="0">
+                                </div>
+                            </div>
+                            
+                            <div class="form-group full-width">
+                                <label>Description</label>
+                                <textarea name="description" required rows="3" placeholder="Product details..."></textarea>
+                            </div>
+
+                            <div class="form-group checkbox-group">
+                                <input type="checkbox" name="has_warranty" value="1" id="warranty">
+                                <label for="warranty">Include 1 Year Official Warranty (+2000 Tk)</label>
+                            </div>
+
+                            <div class="form-group full-width">
+                                <label>Product Image</label>
+                                <input type="file" name="product_image" accept="image/*" class="file-input">
+                            </div>
+
+                            <button type="submit" name="add_product" class="btn-primary">Add Product</button>
+                        </form>
+                    <?php } ?>
+                </div>
+
+                <div class="panel-section">
+                    <h3>Product List</h3>
+                    <div class="table-responsive">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Image</th>
+                                    <th>Name</th>
+                                    <th>Category</th>
+                                    <th>Price</th>
+                                    <th>Stock</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php
+                                $sql = "SELECT p.*, c.name as cat_name FROM products p LEFT JOIN categories c ON p.category_id = c.category_id ORDER BY p.product_id DESC";
+                                $res = $db->query($sql);
+                                if ($res->num_rows > 0) {
+                                    while ($row = $res->fetch_assoc()) {
+                                        echo "<tr>
+                                            <td>#{$row['product_id']}</td>
+                                            <td><div class='img-preview'><img src='uploads/{$row['product_image']}' alt='img'></div></td>
+                                            <td><strong>{$row['name']}</strong></td>
+                                            <td><span class='badge-light'>{$row['cat_name']}</span></td>
+                                            <td>{$row['price']}</td>
+                                            <td>{$row['stock_quantity']}</td>
+                                            <td><a href='?view=products&delete_prod={$row['product_id']}' class='btn-danger' onclick='return confirm(\"Are you sure?\")'><i class='fa fa-trash'></i></a></td>
+                                        </tr>";
+                                    }
+                                } else {
+                                    echo "<tr><td colspan='7' class='text-center'>No products found.</td></tr>";
                                 }
                                 ?>
-                            </select>
-                        </div>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            <?php } ?>
+
+            <?php if (isset($_GET['view']) && $_GET['view'] == 'categories') { ?>
+                <div class="panel-section">
+                    <h3><i class="fa fa-folder-plus"></i> Add Category</h3>
+                    <form method="post" class="admin-form">
                         <div class="form-group">
-                            <label>Price (Tk):</label>
-                            <input type="number" name="price" step="0.01" required>
+                            <label>Category Name</label>
+                            <input type="text" name="cat_name" required placeholder="e.g. Laptops">
                         </div>
-                        <div class="form-group">
-                            <label>Stock Quantity:</label>
-                            <input type="number" name="stock" required>
+                        <div class="form-group full-width">
+                            <label>Description</label>
+                            <textarea name="cat_desc" rows="2" placeholder="Category details..."></textarea>
                         </div>
-                        <div class="form-group">
-                            <label>Product Image:</label>
-                            <input type="file" name="product_image" accept="image/*">
-                        </div>
-                        <button type="submit" name="add_product" style="padding:10px 20px; background:blue; color:white; border:none;">Add Product</button>
+                        <button type="submit" name="add_cat" class="btn-success">Add Category</button>
                     </form>
-                <?php } ?>
-            </div>
+                </div>
 
-            <h3>Product List</h3>
-            <table>
-                <tr>
-                    <th>ID</th>
-                    <th>Image</th>
-                    <th>Name</th>
-                    <th>Category</th>
-                    <th>Price</th>
-                    <th>Stock</th>
-                    <th>Action</th>
-                </tr>
-                <?php
-                $sql = "SELECT p.*, c.name as cat_name FROM products p LEFT JOIN categories c ON p.category_id = c.category_id ORDER BY p.product_id DESC";
-                $res = $db->query($sql);
-                if ($res->num_rows > 0) {
-                    while ($row = $res->fetch_assoc()) {
-                        echo "<tr>
-                            <td>{$row['product_id']}</td>
-                            <td><img src='uploads/{$row['product_image']}' width='50'></td>
-                            <td>{$row['name']}</td>
-                            <td>{$row['cat_name']}</td>
-                            <td>{$row['price']}</td>
-                            <td>{$row['stock_quantity']}</td>
-                            <td><a href='?view=products&delete_prod={$row['product_id']}' class='btn-del' onclick='return confirm(\"Are you sure?\")'>Delete</a></td>
-                        </tr>";
-                    }
-                } else {
-                    echo "<tr><td colspan='7'>No products found.</td></tr>";
-                }
-                ?>
-            </table>
-        <?php } ?>
-
-
-        <!-- ========================================== -->
-        <!-- VIEW: CATEGORIES -->
-        <!-- ========================================== -->
-        <?php if (isset($_GET['view']) && $_GET['view'] == 'categories') { ?>
-            <h2>Manage Categories</h2>
-            <div style="background: #f9f9f9; padding: 20px; border: 1px solid #ddd; margin-bottom: 20px;">
-                <h3>Add Category</h3>
-                <form method="post">
-                    <div class="form-group">
-                        <label>Category Name:</label>
-                        <input type="text" name="cat_name" required>
+                <div class="panel-section">
+                    <h3>Existing Categories</h3>
+                    <div class="table-responsive">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Name</th>
+                                    <th>Description</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php
+                                $res = $db->query("SELECT * FROM categories");
+                                if ($res->num_rows > 0) {
+                                    while ($row = $res->fetch_assoc()) {
+                                        echo "<tr>
+                                            <td>#{$row['category_id']}</td>
+                                            <td><strong>{$row['name']}</strong></td>
+                                            <td>{$row['description']}</td>
+                                            <td><a href='?view=categories&delete_cat={$row['category_id']}' class='btn-danger' onclick='return confirm(\"Delete this category?\")'><i class='fa fa-trash'></i> Delete</a></td>
+                                        </tr>";
+                                    }
+                                } else {
+                                    echo "<tr><td colspan='4' class='text-center'>No categories found.</td></tr>";
+                                }
+                                ?>
+                            </tbody>
+                        </table>
                     </div>
-                    <div class="form-group">
-                        <label>Description:</label>
-                        <textarea name="cat_desc"></textarea>
+                </div>
+            <?php } ?>
+
+            <?php if (isset($_GET['view']) && $_GET['view'] == 'users') { ?>
+                <div class="panel-section">
+                    <h3>Manage Users</h3>
+                    <div class="table-responsive">
+                        <table class="data-table">
+                            <thead>
+                                <tr><th>ID</th><th>Name</th><th>Email</th><th>Status</th><th>Action</th></tr>
+                            </thead>
+                            <tbody>
+                                <?php
+                                $res = $db->query("SELECT * FROM users");
+                                while ($row = $res->fetch_assoc()) {
+                                    $statusClass = ($row['status'] == 'Blocked') ? 'status-blocked' : 'status-active';
+                                    echo "<tr>
+                                        <td>#{$row['user_id']}</td>
+                                        <td>{$row['full_name']}</td>
+                                        <td>{$row['email']}</td>
+                                        <td><span class='status-badge $statusClass'>{$row['status']}</span></td>
+                                        <td>";
+                                        if($row['status'] == 'Blocked') {
+                                            echo "<a href='?view=users&unblock_user={$row['user_id']}' class='btn-success btn-sm'>Unblock</a>";
+                                        } else {
+                                            echo "<a href='?view=users&block_user={$row['user_id']}' class='btn-danger btn-sm'>Block</a>";
+                                        }
+                                    echo "</td></tr>";
+                                }
+                                ?>
+                            </tbody>
+                        </table>
                     </div>
-                    <button type="submit" name="add_cat" style="padding:10px 20px; background:green; color:white; border:none;">Add Category</button>
-                </form>
-            </div>
+                </div>
+            <?php } ?>
 
-            <h3>Existing Categories</h3>
-            <table>
-                <tr>
-                    <th>ID</th>
-                    <th>Name</th>
-                    <th>Description</th>
-                    <th>Action</th>
-                </tr>
-                <?php
-                $res = $db->query("SELECT * FROM categories");
-                if ($res->num_rows > 0) {
-                    while ($row = $res->fetch_assoc()) {
-                        echo "<tr>
-                            <td>{$row['category_id']}</td>
-                            <td>{$row['name']}</td>
-                            <td>{$row['description']}</td>
-                            <td><a href='?view=categories&delete_cat={$row['category_id']}' class='btn-del' onclick='return confirm(\"Delete this category?\")'>Delete</a></td>
-                        </tr>";
-                    }
-                } else {
-                    echo "<tr><td colspan='4'>No categories found.</td></tr>";
-                }
-                ?>
-            </table>
-        <?php } ?>
+            <?php if (isset($_GET['view']) && $_GET['view'] == 'orders') { ?>
+                <div class="panel-section">
+                    <h3>All Orders</h3>
+                    <div class="table-responsive">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Order ID</th>
+                                    <th>User ID</th>
+                                    <th>Total</th>
+                                    <th>Order Status</th>
+                                    <th>Payment Status</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php
+                                $res = $db->query("SELECT * FROM orders ORDER BY order_id DESC");
+                                
+                                $order_statuses = ["Pending", "Processing", "Shipped", "Delivered", "Cancelled"];
+                                $pay_statuses   = ["Unpaid", "Paid", "Refunded"];
+                            
+                                while ($row = $res->fetch_assoc()) {
+                                    echo "<tr>
+                                        <td>#{$row['order_id']}</td>
+                                        <td>User #{$row['user_id']}</td>
+                                        <td>{$row['total_amount']} Tk</td>
+                                        
+                                        <td>
+                                            <select 
+                                                class='status-select' 
+                                                style='border-color: #3b82f6;'
+                                                onchange='window.location.href = \"?view=orders&order_id={$row['order_id']}&update_order_status=\" + this.value'
+                                            >
+                                            ";
+                                            foreach ($order_statuses as $status) {
+                                                $selected = ($row['order_status'] == $status) ? 'selected' : '';
+                                                echo "<option value='$status' $selected>$status</option>";
+                                            }
+                                    echo    "</select>
+                                        </td>
+                            
+                                        <td>
+                                            <select 
+                                                class='status-select' 
+                                                style='border-color: #10b981;'
+                                                onchange='window.location.href = \"?view=orders&order_id={$row['order_id']}&update_payment_status=\" + this.value'
+                                            >
+                                            ";
+                                            foreach ($pay_statuses as $p_status) {
+                                                $p_selected = ($row['payment_status'] == $p_status) ? 'selected' : '';
+                                                echo "<option value='$p_status' $p_selected>$p_status</option>";
+                                            }
+                                    echo    "</select>
+                                        </td>
+                            
+                                        <td>
+                                            <a href='generate_pdf.php?order_id={$row['order_id']}' target='_blank' class='btn-primary btn-sm'><i class='fa fa-file-pdf'></i> PDF</a>
+                                        </td>
+                                    </tr>";
+                                }
+                                ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            <?php } ?>
 
-
-        <!-- ========================================== -->
-        <!-- VIEW: USERS -->
-        <!-- ========================================== -->
-        <?php if (isset($_GET['view']) && $_GET['view'] == 'users') { ?>
-            <h2>Manage Users</h2>
-            <table>
-                <tr><th>ID</th><th>Name</th><th>Email</th><th>Status</th><th>Action</th></tr>
-                <?php
-                $res = $db->query("SELECT * FROM users");
-                while ($row = $res->fetch_assoc()) {
-                    $statusColor = ($row['status'] == 'Blocked') ? 'red' : 'green';
-                    echo "<tr>
-                        <td>{$row['user_id']}</td>
-                        <td>{$row['full_name']}</td>
-                        <td>{$row['email']}</td>
-                        <td style='color:$statusColor'><b>{$row['status']}</b></td>
-                        <td>";
-                        if($row['status'] != 'Blocked') {
-                            echo "<a href='?view=users&block_user={$row['user_id']}' class='btn-del'>Block</a>";
-                        }
-                    echo "</td></tr>";
-                }
-                ?>
-            </table>
-        <?php } ?>
-
-
-        <!-- ========================================== -->
-        <!-- VIEW: ORDERS -->
-        <!-- ========================================== -->
-        <?php if (isset($_GET['view']) && $_GET['view'] == 'orders') { ?>
-            <h2>All Orders</h2>
-            <table>
-                <tr><th>Order ID</th><th>User ID</th><th>Total</th><th>Status</th><th>Action</th></tr>
-                <?php
-                $res = $db->query("SELECT * FROM orders ORDER BY order_id DESC");
-                while ($row = $res->fetch_assoc()) {
-                    echo "<tr>
-                        <td>{$row['order_id']}</td>
-                        <td>{$row['user_id']}</td>
-                        <td>{$row['total_amount']} Tk</td>
-                        <td>{$row['order_status']}</td>
-                        <td><button onclick='alert(\"Generating PDF for Order #{$row['order_id']}...\")'>Generate PDF</button></td>
-                    </tr>";
-                }
-                ?>
-            </table>
-        <?php } ?>
-
-    </div>
+        </div>
+    </main>
+</div>
 
 </body>
 </html>
