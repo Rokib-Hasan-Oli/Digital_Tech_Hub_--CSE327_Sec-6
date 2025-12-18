@@ -1,12 +1,10 @@
 <?php
 require_once 'Database.php';
-// 1. Component Interface
 interface IProduct {
     public function getPrice();
     public function getDescription();
 }
 
-// 2. Concrete Component (The Core Product)
 class BasicProduct implements IProduct {
     protected $name;
     protected $price;
@@ -20,7 +18,6 @@ class BasicProduct implements IProduct {
     public function getDescription() { return $this->name; }
 }
 
-// 3. Decorator (Adds Warranty)
 class WarrantyDecorator implements IProduct {
     protected $product;
 

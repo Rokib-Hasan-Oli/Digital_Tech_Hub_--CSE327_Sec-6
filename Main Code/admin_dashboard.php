@@ -14,6 +14,22 @@ $msg = "";
 // HANDLE ACTIONS (PHP LOGIC)
 // ====================================================
 
+// HELPER: Function to send notification (Simulating Observer)
+function send_user_notification($db, $order_id, $message) {
+    // 1. Get User ID from Order
+    $u_check = $db->query("SELECT user_id FROM orders WHERE order_id = $order_id");
+    if ($u_check && $u_check->num_rows > 0) {
+        $uid = $u_check->fetch_assoc()['user_id'];
+        
+        // 2. Insert Notification
+        $stmt = $db->prepare("INSERT INTO notifications (user_id, message) VALUES (?, ?)");
+        if ($stmt) {
+            $stmt->bind_param("is", $uid, $message);
+            $stmt->execute();
+        }
+    }
+}
+
 // 1. Delete Actions (GET)
 if (isset($_GET['delete_cat'])) {
     $id = intval($_GET['delete_cat']);
@@ -27,20 +43,20 @@ if (isset($_GET['delete_prod'])) {
     $msg = "Product Deleted.";
 }
 
+// 2. User Management
 if (isset($_GET['block_user'])) {
     $uid = intval($_GET['block_user']);
     $db->query("UPDATE users SET status='Blocked' WHERE user_id=$uid");
     $msg = "User Blocked.";
 }
 
-// 4. Unblock User (GET) - ADDED FOR UNBLOCK FUNCTIONALITY
 if (isset($_GET['unblock_user'])) {
     $uid = intval($_GET['unblock_user']);
     $db->query("UPDATE users SET status='Active' WHERE user_id=$uid");
     $msg = "User Unblocked and set to Active.";
 }
 
-// 2. Add Category (POST)
+// 3. Add Category (POST)
 if (isset($_POST['add_cat'])) {
     $name = $db->real_escape_string($_POST['cat_name']);
     $desc = $db->real_escape_string($_POST['cat_desc']);
@@ -51,7 +67,7 @@ if (isset($_POST['add_cat'])) {
     }
 }
 
-// 3. Add Product (POST)
+// 4. Add Product (POST)
 if (isset($_POST['add_product'])) {
     $name = $db->real_escape_string($_POST['name']);
     $desc = $db->real_escape_string($_POST['description']);
@@ -59,6 +75,7 @@ if (isset($_POST['add_product'])) {
     $stock = $_POST['stock'];
     $cat_id = $_POST['category_id'];
     $has_warranty = isset($_POST['has_warranty']) ? 1 : 0;
+    
     // Image Upload Handling
     $image = "default_product.png";
     if (isset($_FILES['product_image']['name']) && $_FILES['product_image']['name'] != "") {
@@ -80,20 +97,34 @@ if (isset($_POST['add_product'])) {
     }
 }
 
-// 5. Update Order Status (GET) - ADDED FOR ORDER STATUS FUNCTIONALITY
+// 5. Update Order Status (Action A)
 if (isset($_GET['update_order_status']) && isset($_GET['order_id'])) {
     $order_id = intval($_GET['order_id']);
     $new_status = $db->real_escape_string($_GET['update_order_status']);
     
-    // Check if the order_id is valid
-    $check = $db->query("SELECT 1 FROM orders WHERE order_id=$order_id");
+    // Update DB
+    $db->query("UPDATE orders SET order_status='$new_status' WHERE order_id=$order_id");
     
-    if ($check->num_rows > 0) {
-        $db->query("UPDATE orders SET order_status='$new_status' WHERE order_id=$order_id");
-        $msg = "Order #$order_id status updated to **$new_status** successfully.";
-    } else {
-        $msg = "Error: Order #$order_id not found.";
-    }
+    // Notify User
+    $msg_text = "Your Order #$order_id status has been updated to: $new_status";
+    send_user_notification($db, $order_id, $msg_text);
+
+    $msg = "Order #$order_id status updated to **$new_status** & User Notified.";
+}
+
+// 6. Update Payment Status (Action B)
+if (isset($_GET['update_payment_status']) && isset($_GET['order_id'])) {
+    $order_id = intval($_GET['order_id']);
+    $new_pay_status = $db->real_escape_string($_GET['update_payment_status']);
+    
+    // Update DB
+    $db->query("UPDATE orders SET payment_status='$new_pay_status' WHERE order_id=$order_id");
+    
+    // Notify User
+    $msg_text = "Payment update for Order #$order_id: Status is now $new_pay_status";
+    send_user_notification($db, $order_id, $msg_text);
+
+    $msg = "Order #$order_id Payment Status set to **$new_pay_status** & User Notified.";
 }
 ?>
 
@@ -266,7 +297,6 @@ if (isset($_GET['update_order_status']) && isset($_GET['order_id'])) {
                 </div>
             <?php } ?>
 
-
             <?php if (isset($_GET['view']) && $_GET['view'] == 'categories') { ?>
                 <div class="panel-section">
                     <h3><i class="fa fa-folder-plus"></i> Add Category</h3>
@@ -317,7 +347,6 @@ if (isset($_GET['update_order_status']) && isset($_GET['order_id'])) {
                 </div>
             <?php } ?>
 
-
             <?php if (isset($_GET['view']) && $_GET['view'] == 'users') { ?>
                 <div class="panel-section">
                     <h3>Manage Users</h3>
@@ -337,7 +366,6 @@ if (isset($_GET['update_order_status']) && isset($_GET['order_id'])) {
                                         <td>{$row['email']}</td>
                                         <td><span class='status-badge $statusClass'>{$row['status']}</span></td>
                                         <td>";
-                                        // UPDATED LOGIC: Display Block or Unblock button
                                         if($row['status'] == 'Blocked') {
                                             echo "<a href='?view=users&unblock_user={$row['user_id']}' class='btn-success btn-sm'>Unblock</a>";
                                         } else {
@@ -352,39 +380,62 @@ if (isset($_GET['update_order_status']) && isset($_GET['order_id'])) {
                 </div>
             <?php } ?>
 
-
-            <?php if (isset($_GET['view']) && $_GET['view'] == 'orders') { 
-                // NEW: Define the possible order statuses
-                $order_statuses = ["Pending", "Processing", "Shipped", "Delivered", "Cancelled"];
-            ?>
+            <?php if (isset($_GET['view']) && $_GET['view'] == 'orders') { ?>
                 <div class="panel-section">
                     <h3>All Orders</h3>
                     <div class="table-responsive">
                         <table class="data-table">
                             <thead>
-                                <tr><th>Order ID</th><th>User ID</th><th>Total</th><th>Status</th><th>Action</th></tr>
+                                <tr>
+                                    <th>Order ID</th>
+                                    <th>User ID</th>
+                                    <th>Total</th>
+                                    <th>Order Status</th>
+                                    <th>Payment Status</th>
+                                    <th>Action</th>
+                                </tr>
                             </thead>
                             <tbody>
                                 <?php
                                 $res = $db->query("SELECT * FROM orders ORDER BY order_id DESC");
+                                
+                                $order_statuses = ["Pending", "Processing", "Shipped", "Delivered", "Cancelled"];
+                                $pay_statuses   = ["Unpaid", "Paid", "Refunded"];
+                            
                                 while ($row = $res->fetch_assoc()) {
                                     echo "<tr>
                                         <td>#{$row['order_id']}</td>
                                         <td>User #{$row['user_id']}</td>
                                         <td>{$row['total_amount']} Tk</td>
+                                        
                                         <td>
                                             <select 
                                                 class='status-select' 
+                                                style='border-color: #3b82f6;'
                                                 onchange='window.location.href = \"?view=orders&order_id={$row['order_id']}&update_order_status=\" + this.value'
                                             >
                                             ";
-                                            // NEW: Loop through statuses to create the dropdown
                                             foreach ($order_statuses as $status) {
                                                 $selected = ($row['order_status'] == $status) ? 'selected' : '';
                                                 echo "<option value='$status' $selected>$status</option>";
                                             }
-                                            echo "</select>
+                                    echo    "</select>
                                         </td>
+                            
+                                        <td>
+                                            <select 
+                                                class='status-select' 
+                                                style='border-color: #10b981;'
+                                                onchange='window.location.href = \"?view=orders&order_id={$row['order_id']}&update_payment_status=\" + this.value'
+                                            >
+                                            ";
+                                            foreach ($pay_statuses as $p_status) {
+                                                $p_selected = ($row['payment_status'] == $p_status) ? 'selected' : '';
+                                                echo "<option value='$p_status' $p_selected>$p_status</option>";
+                                            }
+                                    echo    "</select>
+                                        </td>
+                            
                                         <td>
                                             <a href='generate_pdf.php?order_id={$row['order_id']}' target='_blank' class='btn-primary btn-sm'><i class='fa fa-file-pdf'></i> PDF</a>
                                         </td>

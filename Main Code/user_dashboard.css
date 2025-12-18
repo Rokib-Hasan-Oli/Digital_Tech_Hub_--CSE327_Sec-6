@@ -2,9 +2,11 @@
    RESET & VARIABLES
 ============================= */
 :root {
-    --primary-color: #0d47a1; /* Deep Blue */
+    --primary-color: #0d47a1;
+    /* Deep Blue */
     --primary-light: #1565c0;
-    --accent-color: #e65100; /* Orange accent */
+    --accent-color: #e65100;
+    /* Orange accent */
     --bg-body: #f3f4f6;
     --bg-white: #ffffff;
     --text-dark: #1f2937;
@@ -25,7 +27,8 @@ body {
     background-color: var(--bg-body);
     color: var(--text-dark);
     height: 100vh;
-    overflow: hidden; /* Prevents double scrollbars */
+    overflow: hidden;
+    /* Prevents double scrollbars */
 }
 
 /* =============================
@@ -46,7 +49,7 @@ body {
     display: flex;
     flex-direction: column;
     padding: 20px;
-    box-shadow: 4px 0 15px rgba(0,0,0,0.1);
+    box-shadow: 4px 0 15px rgba(0, 0, 0, 0.1);
     z-index: 10;
 }
 
@@ -105,7 +108,7 @@ body {
     font-weight: 700;
     font-size: 1.2rem;
     color: white;
-    border: 2px solid rgba(255,255,255,0.3);
+    border: 2px solid rgba(255, 255, 255, 0.3);
 }
 
 .user-info h3 {
@@ -115,7 +118,7 @@ body {
 
 .user-info .badge {
     font-size: 0.75rem;
-    background: rgba(0,0,0,0.2);
+    background: rgba(0, 0, 0, 0.2);
     padding: 2px 8px;
     border-radius: 10px;
     color: #e0e7ff;
@@ -144,7 +147,8 @@ body {
     width: 25px;
 }
 
-.side-nav a:hover, .side-nav a.active {
+.side-nav a:hover,
+.side-nav a.active {
     background: rgba(255, 255, 255, 0.2);
     color: white;
     transform: translateX(5px);
@@ -303,7 +307,8 @@ body {
     font-size: 0.8rem;
 }
 
-.filter-group input, .filter-group select {
+.filter-group input,
+.filter-group select {
     padding: 10px 15px;
     border: 1px solid #e5e7eb;
     border-radius: 8px;
@@ -505,8 +510,13 @@ body {
 }
 
 /* Rounded Header Corners */
-.data-table th:first-child { border-top-left-radius: 8px; }
-.data-table th:last-child { border-top-right-radius: 8px; }
+.data-table th:first-child {
+    border-top-left-radius: 8px;
+}
+
+.data-table th:last-child {
+    border-top-right-radius: 8px;
+}
 
 .data-table td {
     padding: 15px;
@@ -568,23 +578,23 @@ body {
         width: 80px;
         padding: 15px 10px;
     }
-    
-    .sidebar .logo-area span, 
-    .user-profile-widget, 
+
+    .sidebar .logo-area span,
+    .user-profile-widget,
     .side-nav a span {
         display: none;
     }
-    
+
     .side-nav a {
         justify-content: center;
         padding: 15px;
     }
-    
+
     .side-nav a i {
         width: auto;
         font-size: 1.2rem;
     }
-    
+
     .logo-area {
         padding-left: 0;
         justify-content: center;

@@ -23,6 +23,19 @@ if (!isset($_SESSION['user_id'])) {
 }
 $user_id = $_SESSION['user_id'] ?? 0;
 
+// [NEW Logic] Mark notifications as read if viewing them
+if (isset($_GET['view']) && $_GET['view'] == 'notifications') {
+    $db->query("UPDATE notifications SET is_read = 1 WHERE user_id = $user_id");
+}
+
+// [NEW Logic] Count unread notifications
+$notif_count = 0;
+$nc_sql = "SELECT COUNT(*) as count FROM notifications WHERE user_id = $user_id AND is_read = 0";
+$nc_res = $db->query($nc_sql);
+if ($nc_res) {
+    $notif_count = $nc_res->fetch_assoc()['count'];
+}
+
 // ============================
 // DATA FETCHING (Only for Products View)
 // ============================
@@ -90,6 +103,39 @@ if (isset($_POST['add_cart'])) {
     
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+    <style>
+        /* [NEW STYLE] Notification Badge */
+        .notification-bell {
+            position: relative;
+            text-decoration: none;
+        }
+
+        .badge-counter {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background-color: #ef4444; /* Red color */
+            color: white;
+            border-radius: 50%;
+            width: 18px;
+            height: 18px;
+            font-size: 10px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid #ffffff;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            animation: popIn 0.3s ease-out;
+        }
+
+        @keyframes popIn {
+            0% { transform: scale(0); }
+            80% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+    </style>
 </head>
 
 <body>
@@ -107,11 +153,9 @@ if (isset($_POST['add_cart'])) {
             <div class="user-profile-widget">
                 <div class="avatar-circle">
                     <?php 
-                    // FIX: Fetch the latest photo from DB matching profile_settings.php logic
                     $u_res = $db->query("SELECT profile_image FROM users WHERE user_id=$user_id");
                     if ($u_res) {
                         $u_row = $u_res->fetch_assoc();
-                        // Check uploads/profiles/ folder
                         if (!empty($u_row['profile_image']) && file_exists('uploads/profiles/' . $u_row['profile_image'])) {
                             echo "<img src='uploads/profiles/{$u_row['profile_image']}' style='width:100%; height:100%; object-fit:cover; border-radius:50%;'>";
                         } else {
@@ -164,6 +208,9 @@ if (isset($_POST['add_cart'])) {
                     <?php if (isset($_GET['view']) && $_GET['view'] == 'orders'): ?>
                         <h2>My Orders</h2>
                         <p>Track your purchase history</p>
+                    <?php elseif (isset($_GET['view']) && $_GET['view'] == 'notifications'): ?>
+                        <h2>Notifications</h2>
+                        <p>Latest updates on your account</p>
                     <?php else: ?>
                         <h2>Find your gadget</h2>
                         <p>Welcome back, <?php echo htmlspecialchars($_SESSION['name']); ?></p>
@@ -177,9 +224,17 @@ if (isset($_POST['add_cart'])) {
                         <input type="text" name="search" placeholder="Search...">
                     </form>
                     <?php endif; ?>
-                    <div class="notification-bell">
+                    
+                    <a href="?view=notifications" class="notification-bell">
                         <i class="fa-regular fa-bell"></i>
-                    </div>
+                        
+                        <?php if ($notif_count > 0): ?>
+                            <span class="badge-counter">
+                                <?php echo ($notif_count > 9) ? '9+' : $notif_count; ?>
+                            </span>
+                        <?php endif; ?>
+                    </a>
+
                 </div>
             </header>
 
@@ -327,6 +382,36 @@ if (isset($_POST['add_cart'])) {
                                     ?>
                                 </tbody>
                             </table>
+                        </div>
+                    </div>
+
+                <?php elseif (isset($_GET['view']) && $_GET['view'] == 'notifications'): ?>
+                    
+                    <div class="panel-section">
+                        <h3><i class="fa fa-bell"></i> Your Notifications</h3>
+                        
+                        <div class="notification-list">
+                            <?php
+                            $n_sql = "SELECT * FROM notifications WHERE user_id = $user_id ORDER BY created_at DESC";
+                            $n_res = $db->query($n_sql);
+
+                            if ($n_res && $n_res->num_rows > 0) {
+                                while ($notif = $n_res->fetch_assoc()) {
+                                    ?>
+                                    <div style="background: white; padding: 15px; margin-bottom: 10px; border-left: 4px solid var(--primary-color); border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                                        <p style="margin: 0; font-weight: 500; color: #333;">
+                                            <?php echo htmlspecialchars($notif['message']); ?>
+                                        </p>
+                                        <small style="color: #888;">
+                                            <i class="fa fa-clock"></i> <?php echo date('d M Y, h:i A', strtotime($notif['created_at'])); ?>
+                                        </small>
+                                    </div>
+                                    <?php
+                                }
+                            } else {
+                                echo "<p class='text-center' style='padding: 20px; color: #666;'>No new notifications.</p>";
+                            }
+                            ?>
                         </div>
                     </div>
 
